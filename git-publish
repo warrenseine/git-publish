@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec "${PYTHON:-python3}" -m gp "$@"
