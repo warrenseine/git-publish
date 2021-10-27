@@ -24,6 +24,25 @@ def main(argv: list[str]):
         update_commit_message(args.message_file)
     else:
         install_commit_message_hook()
+        publish_changes()
+
+
+def publish_changes():
+    # 1. Ensure clean working directory.
+    # 2. List existing Merge Requests for my user
+    # 3. Check current branch is master (or main)
+    # 4. Go through all commits (older to newer) above origin/master:
+    #   1. Check the commit have a Change-Id field
+    #   2. Remember the name of the current branch
+    #   3. Create a branch named "{username}-{change_id}" from the current branch if it doesn't exist
+    #   4. Switch to this branch
+    #   5. Cherry-pick the commit
+    #   6. Force-push the branch
+    #   7. Find a Merge Request with source branch "{username}-{change_id}"
+    #   8. Update target branch on Merge Request to previous branch if found
+    #   9. Create a Merge Request from "{username}-{change_id}" to previous branch otherwise
+    #   10. Delete previous branch locally
+    pass
 
 
 def update_commit_message(message_file: str):
