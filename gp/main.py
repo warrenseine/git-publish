@@ -1,7 +1,9 @@
 import argparse
 import filecmp
+import getpass
 import git
 import os
+import random
 import shutil
 
 version = "0.0.1"
@@ -14,10 +16,45 @@ def main(argv: list[str]):
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {version}"
     )
+    parser.add_argument("-m", "--message-file", action="store")
 
     args = parser.parse_args(argv)
 
-    install_commit_message_hook()
+    if args.message_file:
+        update_commit_message(args.message_file)
+    else:
+        install_commit_message_hook()
+
+
+def update_commit_message(message_file: str):
+    with open(message_file, "r+") as file:
+        message = file.read()
+        change_id = get_change_id(message)
+
+        if not change_id:
+            change_id = create_change_id()
+            updated_message = f"{message.strip()}\n\nChange-Id: {change_id}\n"
+            file.seek(0)
+            file.write(updated_message)
+            file.truncate()
+
+
+def create_change_id():
+    user = getpass.getuser()
+    hash = random.getrandbits(16)
+    return f"{user}-{hash:04x}"
+
+
+def get_change_id(message: str) -> str or None:
+    last_paragraph = message.split("\n\n")[-1]
+    change_id_line = next(
+        (line for line in last_paragraph.splitlines() if line.startswith("Change-Id:")),
+        None,
+    )
+    if not change_id_line:
+        return None
+    change_id = change_id_line.lstrip("Change-Id:").strip()
+    return change_id
 
 
 def install_commit_message_hook():
@@ -31,6 +68,7 @@ def install_commit_message_hook():
             )
     else:
         shutil.copyfile(commit_message_script, commit_message_hook_path)
+        os.chmod(commit_message_hook_path, 0o775)
         print("commit-msg hook installed")
 
 
