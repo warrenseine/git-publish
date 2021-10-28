@@ -5,13 +5,15 @@ import git
 import os
 import random
 import shutil
+import sys
 
 version = "0.0.1"
+program = "git-publish"
 
 
 def main(argv: list[str]):
     parser = argparse.ArgumentParser(
-        prog="git-publish", description="Publish atomic Git commits."
+        prog=program, description="Publish atomic Git commits."
     )
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {version}"
@@ -42,7 +44,16 @@ def publish_changes():
     #   8. Update target branch on Merge Request to previous branch if found
     #   9. Create a Merge Request from "{username}-{change_id}" to previous branch otherwise
     #   10. Delete previous branch locally
+    if not ensure_clean_working_directory():
+        return fail(
+            f"Working directory is not clean. Clean it first before calling {program}."
+        )
     pass
+
+
+def ensure_clean_working_directory():
+    repo = git.Repo(".", search_parent_directories=True)
+    return not repo.is_dirty() and not repo.untracked_files
 
 
 def update_commit_message(message_file: str):
@@ -96,3 +107,8 @@ def find_git_dir():
     if not repo.git_dir:
         raise RuntimeError("not a git repository")
     return repo.git_dir
+
+
+def fail(message: str) -> int:
+    print(f"{program} error:", message, file=sys.stderr)
+    exit(1)
