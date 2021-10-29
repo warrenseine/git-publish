@@ -2,10 +2,13 @@ import argparse
 import filecmp
 import getpass
 import git
+import gitlab
 import os
 import random
 import shutil
 import sys
+
+from gitlab.v4.objects.merge_requests import MergeRequest
 
 version = "0.0.1"
 program = "git-publish"
@@ -51,7 +54,10 @@ def publish_changes():
         )
     if not ensure_main_branch(repo):
         return fail("Current branch must be 'main' or 'master' to publish changes.")
-    pass
+
+    gitlab_client = gitlab.Gitlab.from_config("gitlab.com")
+    merge_requests = list_merge_requests(gitlab_client)
+
 
 def ensure_clean_working_directory(repo: git.Repo) -> bool:
     return not repo.is_dirty() and not repo.untracked_files
@@ -59,6 +65,10 @@ def ensure_clean_working_directory(repo: git.Repo) -> bool:
 
 def ensure_main_branch(repo: git.Repo) -> bool:
     return repo.active_branch.name in ["main", "master"]
+
+
+def list_merge_requests(gitlab_client: gitlab.Gitlab) -> list[MergeRequest]:
+    return gitlab_client.mergerequests.list()
 
 
 def update_commit_message(message_file: str):
