@@ -8,7 +8,11 @@ import random
 import shutil
 import sys
 
-from gitlab.v4.objects.merge_requests import MergeRequest
+from gitlab.v4.objects.merge_requests import (
+    MergeRequest,
+    ProjectMergeRequest,
+    ProjectMergeRequestManager,
+)
 
 version = "0.0.1"
 program = "git-publish"
@@ -69,6 +73,18 @@ def ensure_main_branch(repo: git.Repo) -> bool:
 
 def list_merge_requests(gitlab_client: gitlab.Gitlab) -> list[MergeRequest]:
     return gitlab_client.mergerequests.list()
+
+
+def update_merge_request(
+    gitlab_client: gitlab.Gitlab, merge_request: MergeRequest, target_branch: str
+):
+    project = gitlab_client.projects.get(merge_request.project_id, lazy=True)
+    merge_requests: ProjectMergeRequestManager = project.mergerequests
+    editable_merge_request: ProjectMergeRequest = merge_requests.get(
+        merge_request.iid, lazy=True
+    )
+    editable_merge_request.target_branch = target_branch
+    editable_merge_request.save()
 
 
 def update_commit_message(message_file: str):
