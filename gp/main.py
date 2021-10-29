@@ -44,16 +44,21 @@ def publish_changes():
     #   8. Update target branch on Merge Request to previous branch if found
     #   9. Create a Merge Request from "{username}-{change_id}" to previous branch otherwise
     #   10. Delete previous branch locally
-    if not ensure_clean_working_directory():
+    repo = git.Repo(".", search_parent_directories=True)
+    if not ensure_clean_working_directory(repo):
         return fail(
             f"Working directory is not clean. Clean it first before calling {program}."
         )
+    if not ensure_main_branch(repo):
+        return fail("Current branch must be 'main' or 'master' to publish changes.")
     pass
 
-
-def ensure_clean_working_directory():
-    repo = git.Repo(".", search_parent_directories=True)
+def ensure_clean_working_directory(repo: git.Repo) -> bool:
     return not repo.is_dirty() and not repo.untracked_files
+
+
+def ensure_main_branch(repo: git.Repo) -> bool:
+    return repo.active_branch.name in ["main", "master"]
 
 
 def update_commit_message(message_file: str):
