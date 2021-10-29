@@ -78,6 +78,11 @@ def publish_changes():
     if not commits:
         return fail("Nothing to publish.")
 
+    for commit in reversed(commits):
+        change_id = get_change_id(commit.message)
+        if not change_id:
+            return fail(f"Commit {commit.hexsha} doesn't have a Change-Id field.")
+
 
 def ensure_clean_working_directory(repo: git.Repo) -> bool:
     return not repo.is_dirty() and not repo.untracked_files
