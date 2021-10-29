@@ -2,6 +2,7 @@ import argparse
 import filecmp
 import getpass
 import git
+import git.objects
 import gitlab
 import os
 import random
@@ -62,6 +63,21 @@ def publish_changes():
     gitlab_client = gitlab.Gitlab.from_config("gitlab.com")
     merge_requests = list_merge_requests(gitlab_client)
 
+    active_branch = repo.active_branch
+    tracking_branch = active_branch.tracking_branch()
+
+    if not isinstance(tracking_branch, git.RemoteReference):
+        return fail(f"Current branch {active_branch} is not tracking.")
+
+    commit1: git.objects.Commit = active_branch.commit
+    commit2: git.objects.Commit = tracking_branch.commit
+    commit3 = get_most_recent_common_ancestor(commit1, commit2)
+
+    commits = collect_commits_between(commit1, commit3)
+
+    if not commits:
+        return fail("Nothing to publish.")
+
 
 def ensure_clean_working_directory(repo: git.Repo) -> bool:
     return not repo.is_dirty() and not repo.untracked_files
@@ -69,6 +85,31 @@ def ensure_clean_working_directory(repo: git.Repo) -> bool:
 
 def ensure_main_branch(repo: git.Repo) -> bool:
     return repo.active_branch.name in ["main", "master"]
+
+
+def collect_commits_between(
+    top: git.objects.Commit, bottom: git.objects.Commit
+) -> list[git.objects.Commit]:
+    commits = []
+    while top != bottom:
+        commits.append(top)
+        if len(top.parents) > 1:
+            return fail(f"Merge commit {top.hexsha} cannot be published.")
+        if not top.parents:
+            return fail(f"Commit {top.hexsha} has no parent.")
+        top = top.parents[0]
+    return commits
+
+
+def get_most_recent_common_ancestor(
+    commit1: git.objects.Commit, commit2: git.objects.Commit
+) -> git.objects.Commit:
+    ancestors = commit1.repo.merge_base(commit1, commit2)
+    if len(ancestors) != 1:
+        return fail(
+            f"Commit {commit1.hexsha} and commit {commit2.hexsha} do not have a single common ancestor."
+        )
+    return ancestors[0]
 
 
 def list_merge_requests(gitlab_client: gitlab.Gitlab) -> list[MergeRequest]:
