@@ -3,4 +3,5 @@ black
 GitPython
 python-dotenv
 python-gitlab
+PyGithub
 giturlparse
