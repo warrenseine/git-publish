@@ -2,22 +2,16 @@ from argparse import ArgumentParser
 from dotenv import load_dotenv
 from filecmp import cmp
 from getpass import getuser
-from git import Head, Remote
+from git import Head
 from git.objects import Commit
 from git.repo import Repo
-from gitlab.client import Gitlab
-from gitlab.v4.objects import Project, ProjectManager
-from gitlab.v4.objects.merge_requests import (
-    MergeRequest,
-    ProjectMergeRequest,
-    ProjectMergeRequestManager,
-)
-from giturlparse import parse as parse_git_url
-from os import chmod, getenv
+from os import chmod
 from os.path import join, exists
 from random import getrandbits
 from shutil import copyfile
 from typing import NoReturn, Optional
+
+from gp.gitproject import build_git_project
 
 
 version = "0.0.1"
@@ -65,8 +59,6 @@ def publish_changes():
     if not ensure_main_branch(repo):
         fail("Current branch must be 'main' or 'master' to publish changes.")
 
-    gitlab = Gitlab("https://gitlab.com", private_token=getenv("GITLAB_TOKEN"))
-
     active_branch = repo.active_branch
     tracking_branch = active_branch.tracking_branch()
 
@@ -84,8 +76,7 @@ def publish_changes():
     if not commits:
         fail("Nothing to publish.")
 
-    project = get_project(gitlab, remote)
-    merge_requests = list_merge_requests(project)
+    project = build_git_project(remote)
 
     previous_branch = active_branch
 
@@ -99,12 +90,9 @@ def publish_changes():
         refspec = f"refs/heads/{current_branch.name}:refs/heads/{current_branch.name}"
         remote.push(refspec)
 
-        merge_request = find_merge_request(merge_requests, change_id)
-
-        if merge_request:
-            update_merge_request(project, merge_request, previous_branch)
-        else:
-            create_merge_request(project, current_branch, previous_branch)
+        project.create_or_update_change(
+            change_id, current_branch, previous_branch, str(commit.summary)
+        )
 
         previous_branch = current_branch
 
@@ -115,15 +103,6 @@ def ensure_clean_working_directory(repo: Repo) -> bool:
 
 def ensure_main_branch(repo: Repo) -> bool:
     return repo.active_branch.name in ["main", "master"]
-
-
-def find_merge_request(
-    merge_requests: list[MergeRequest], source_branch: str
-) -> Optional[MergeRequest]:
-    for merge_request in merge_requests:
-        if merge_request.source_branch == source_branch:
-            return merge_request
-    return None
 
 
 def create_branch(repo: Repo, change_id: str, commit: Commit):
@@ -168,45 +147,6 @@ def get_head_commit(head: Head) -> Commit:
 
 def get_commit_message(commit: Commit) -> str:
     return commit.message  # type: ignore
-
-
-def list_merge_requests(project: Project) -> list[MergeRequest]:
-    merge_requests: ProjectMergeRequestManager = project.mergerequests
-    return merge_requests.list()  # type: ignore
-
-
-def update_merge_request(
-    project: Project, merge_request: MergeRequest, target_branch: Head
-):
-    merge_requests: ProjectMergeRequestManager = project.mergerequests
-    editable_merge_request: ProjectMergeRequest = merge_requests.get(
-        merge_request.iid, lazy=True
-    )  # type: ignore
-    editable_merge_request.target_branch = target_branch
-    editable_merge_request.save()
-
-
-def create_merge_request(
-    project: Project,
-    source_branch: Head,
-    target_branch: Head,
-):
-    commit = get_head_commit(source_branch)
-    merge_requests: ProjectMergeRequestManager = project.mergerequests
-    merge_requests.create(
-        {
-            "source_branch": source_branch.name,
-            "target_branch": target_branch.name,
-            "title": commit.summary,
-        }
-    )
-
-
-def get_project(gitlab: Gitlab, remote: Remote) -> Project:
-    git_url = parse_git_url(remote.url)
-    project_namespace = f"{git_url.owner}/{git_url.repo}"  # type: ignore
-    project_manager: ProjectManager = gitlab.projects  # type: ignore
-    return project_manager.get(project_namespace, lazy=True)
 
 
 def update_commit_message(message_file: str):
