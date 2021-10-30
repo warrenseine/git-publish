@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from dotenv import load_dotenv
 from filecmp import cmp
 from getpass import getuser
 from git import Head, Remote
@@ -12,7 +13,7 @@ from gitlab.v4.objects.merge_requests import (
     ProjectMergeRequestManager,
 )
 from giturlparse import parse as parse_git_url
-from os import chmod
+from os import chmod, getenv
 from os.path import join, exists
 from random import getrandbits
 from shutil import copyfile
@@ -31,6 +32,8 @@ def main(argv: list[str]):
     parser.add_argument("-m", "--message-file", action="store")
 
     args = parser.parse_args(argv)
+
+    load_dotenv()
 
     if args.message_file:
         update_commit_message(args.message_file)
@@ -62,7 +65,7 @@ def publish_changes():
     if not ensure_main_branch(repo):
         fail("Current branch must be 'main' or 'master' to publish changes.")
 
-    gitlab = Gitlab.from_config("gitlab.com")
+    gitlab = Gitlab("https://gitlab.com", private_token=getenv("GITLAB_TOKEN"))
 
     active_branch = repo.active_branch
     tracking_branch = active_branch.tracking_branch()
