@@ -90,9 +90,11 @@ def publish_changes():
         refspec = f"refs/heads/{current_branch.name}:refs/heads/{current_branch.name}"
         remote.push(refspec)
 
-        project.create_or_update_change(
+        change_url = project.create_or_update_change(
             change_id, current_branch, previous_branch, str(commit.summary)
         )
+
+        info(f"{commit.summary} ➡️ {change_url}")
 
         previous_branch = current_branch
 
@@ -204,3 +206,7 @@ def find_git_dir() -> str:
 
 def fail(message: str) -> NoReturn:
     raise SystemExit(f"{program} error: {message}")
+
+
+def info(message: str):
+    print(f"{program} info: {message}")

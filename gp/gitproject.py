@@ -18,7 +18,7 @@ class GitProject(ABC):
     @abstractmethod
     def create_or_update_change(
         self, change_id: str, source_branch: Head, target_branch: Head, title: str
-    ):
+    ) -> str:
         ...
 
 
@@ -46,13 +46,17 @@ class GithubProject(GitProject):
 
     def create_or_update_change(
         self, change_id: str, source_branch: Head, target_branch: Head, title: str
-    ):
+    ) -> str:
         pull_request = self.__find_pull_request(change_id)
 
         if pull_request:
             self.__update_pull_request(pull_request, target_branch, title)
         else:
-            self.__create_pull_request(source_branch, target_branch, title)
+            pull_request = self.__create_pull_request(
+                source_branch, target_branch, title
+            )
+
+        return pull_request.html_url
 
     def __find_pull_request(self, source_branch: str) -> Optional[PullRequest]:
         for pull_request in self.pull_requests:
@@ -67,8 +71,10 @@ class GithubProject(GitProject):
 
     def __create_pull_request(
         self, source_branch: Head, target_branch: Head, title: str
-    ):
-        self.project.create_pull(title, "", target_branch.name, source_branch.name)
+    ) -> PullRequest:
+        return self.project.create_pull(
+            title, "", target_branch.name, source_branch.name
+        )
 
 
 class GitlabProject(GitProject):
@@ -83,13 +89,17 @@ class GitlabProject(GitProject):
 
     def create_or_update_change(
         self, change_id: str, source_branch: Head, target_branch: Head, title: str
-    ):
+    ) -> str:
         merge_request = self.__find_merge_request(change_id)
 
         if merge_request:
             self.__update_merge_request(merge_request, target_branch, title)
         else:
-            self.__create_merge_request(source_branch, target_branch, title)
+            merge_request = self.__create_merge_request(
+                source_branch, target_branch, title
+            )
+
+        return merge_request.web_url
 
     def __list_merge_requests(self) -> list[MergeRequest]:
         return self.merge_requests.list()  # type: ignore
@@ -113,10 +123,12 @@ class GitlabProject(GitProject):
     def __create_merge_request(
         self, source_branch: Head, target_branch: Head, title: str
     ):
-        self.merge_requests.create(
+        response = self.merge_requests.create(
             {
                 "source_branch": source_branch.name,
                 "target_branch": target_branch.name,
                 "title": title,
             }
         )
+        merge_request: MergeRequest = response  # type: ignore
+        return merge_request
