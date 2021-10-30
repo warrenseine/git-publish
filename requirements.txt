@@ -2,3 +2,4 @@ pre-commit
 black
 GitPython
 python-gitlab
+giturlparse

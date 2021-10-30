@@ -69,6 +69,8 @@ def publish_changes():
     if not isinstance(tracking_branch, git.RemoteReference):
         return fail(f"Current branch {active_branch} is not tracking.")
 
+    remote = repo.remote(tracking_branch.remote_name)
+
     commit1: git.objects.Commit = active_branch.commit
     commit2: git.objects.Commit = tracking_branch.commit
     commit3 = get_most_recent_common_ancestor(commit1, commit2)
@@ -78,10 +80,26 @@ def publish_changes():
     if not commits:
         return fail("Nothing to publish.")
 
+    previous_branch = active_branch
+
     for commit in reversed(commits):
         change_id = get_change_id(commit.message)
         if not change_id:
             return fail(f"Commit {commit.hexsha} doesn't have a Change-Id field.")
+
+        current_branch = create_branch(repo, change_id, commit)
+
+        refspec = f"refs/heads/{current_branch.name}:refs/heads/{current_branch.name}"
+        remote.push(refspec)
+
+        merge_request = find_merge_request(merge_requests, change_id)
+
+        if merge_request:
+            update_merge_request(gitlab_client, merge_request, previous_branch)
+        else:
+            create_merge_request(gitlab_client, remote, current_branch, previous_branch)
+
+        previous_branch = current_branch
 
 
 def ensure_clean_working_directory(repo: git.Repo) -> bool:
@@ -90,6 +108,21 @@ def ensure_clean_working_directory(repo: git.Repo) -> bool:
 
 def ensure_main_branch(repo: git.Repo) -> bool:
     return repo.active_branch.name in ["main", "master"]
+
+
+def find_merge_request(
+    merge_requests: list[MergeRequest], source_branch: str
+) -> MergeRequest or None:
+    for merge_request in merge_requests:
+        if merge_request.source_branch == source_branch:
+            return merge_request
+    return None
+
+
+def create_branch(repo: git.Repo, change_id: str, commit: git.objects.Commit):
+    branch = repo.create_head(change_id, force=True)
+    branch.set_commit(commit)
+    return branch
 
 
 def collect_commits_between(
@@ -131,6 +164,29 @@ def update_merge_request(
     )
     editable_merge_request.target_branch = target_branch
     editable_merge_request.save()
+
+
+def create_merge_request(
+    gitlab_client: gitlab.Gitlab,
+    remote: git.Remote,
+    source_branch: git.Head,
+    target_branch: git.Head,
+):
+    project_namespace = get_project_namespace(remote)
+    project = gitlab_client.projects.get(project_namespace)
+    commit: git.objects.Commit = source_branch.commit
+    project.mergerequests.create(
+        {
+            "source_branch": source_branch.name,
+            "target_branch": target_branch.name,
+            "title": commit.summary,
+        }
+    )
+
+
+def get_project_namespace(remote: git.Remote) -> str:
+    url = giturlparse.parse(remote.url)
+    return f"{url.owner}/{url.repo}"
 
 
 def update_commit_message(message_file: str):
