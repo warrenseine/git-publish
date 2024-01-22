@@ -18,7 +18,7 @@ version = "0.0.1"
 program = "git-publish"
 
 
-def main(argv: list[str]):
+def main(argv: list[str] = []):
     parser = ArgumentParser(prog=program, description="Publish atomic Git commits.")
     parser.add_argument(
         "-v", "--version", action="version", version=f"%(prog)s {version}"

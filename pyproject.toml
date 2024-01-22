@@ -19,6 +19,8 @@ giturlparse = "^0.12.0"
 ruff = "^0.1.14"
 pyright = "^1.1.348"
 
+[tool.poetry.scripts]
+gp = "gp.main:main"
 
 [build-system]
 requires = ["poetry-core"]
