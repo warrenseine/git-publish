@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from dotenv import load_dotenv
-from filecmp import cmp
 from getpass import getuser
 from git import Head
 from git.objects import Commit
@@ -8,7 +7,7 @@ from git.repo import Repo
 from os import chmod
 from os.path import join, exists
 from random import getrandbits
-from shutil import copyfile
+from textwrap import dedent
 from typing import NoReturn, Optional
 
 from gp.gitproject import build_git_project
@@ -183,16 +182,24 @@ def get_change_id(message: str) -> Optional[str]:
 
 
 def install_commit_message_hook():
-    commit_message_script = join("resources", "commit-msg")
+    commit_message_template = dedent(
+        """\
+        #!/bin/sh
+        git publish --message-file "$1"
+        """
+    )
     git_dir = find_git_dir()
     commit_message_hook_path = join(git_dir, "hooks", "commit-msg")
     if exists(commit_message_hook_path):
-        if not cmp(commit_message_hook_path, commit_message_script):
-            raise RuntimeError(
-                f"commit-msg script {commit_message_hook_path} must be removed first"
-            )
+        with open(commit_message_hook_path) as file:
+            content = file.read()
+            if content != commit_message_template:
+                raise RuntimeError(
+                    f"commit-msg script {commit_message_hook_path} must be removed first"
+                )
     else:
-        copyfile(commit_message_script, commit_message_hook_path)
+        with open(commit_message_hook_path, "w") as file:
+            file.write(commit_message_template)
         chmod(commit_message_hook_path, 0o775)
         print("commit-msg hook installed")
 
