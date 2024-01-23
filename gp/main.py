@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from getpass import getuser
 from git import Head
 from git.objects import Commit
+from git.remote import Remote
 from git.repo import Repo
 from os import chmod
 from os.path import join, exists
@@ -86,8 +87,7 @@ def publish_changes():
 
         current_branch = create_branch(repo, change_id, commit)
 
-        refspec = f"refs/heads/{current_branch.name}:refs/heads/{current_branch.name}"
-        remote.push(refspec)
+        push_branch(remote, current_branch)
 
         title = get_commit_summary(commit)
 
@@ -112,6 +112,11 @@ def create_branch(repo: Repo, change_id: str, commit: Commit):
     branch = repo.create_head(change_id, force=True)
     branch.set_commit(commit)
     return branch
+
+
+def push_branch(remote: Remote, branch: Head):
+    refspec = f"refs/heads/{branch.name}:refs/heads/{branch.name}"
+    remote.push(refspec, force=True)
 
 
 def collect_commits_between(top: Commit, bottom: Commit) -> list[Commit]:
