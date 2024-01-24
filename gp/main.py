@@ -89,8 +89,10 @@ def publish_changes():
         refspec = f"refs/heads/{current_branch.name}:refs/heads/{current_branch.name}"
         remote.push(refspec)
 
+        title = get_commit_summary(commit)
+
         change_url = project.create_or_update_change(
-            change_id, current_branch, previous_branch, str(commit.summary)
+            change_id, current_branch, previous_branch, title
         )
 
         info(f"{commit.summary} 🔗 {change_url}")
@@ -134,7 +136,7 @@ def get_most_recent_common_ancestor(commit1: Commit, commit2: Commit) -> Commit:
 
 
 def get_commit_parent(commit: Commit) -> Commit:
-    parents: list[Commit] = commit.parents  # type: ignore
+    parents = list(commit.parents)
     if len(parents) > 1:
         fail(f"Merge commit {commit.hexsha} cannot be published.")
     if not parents:
@@ -143,11 +145,15 @@ def get_commit_parent(commit: Commit) -> Commit:
 
 
 def get_head_commit(head: Head) -> Commit:
-    return head.commit  # type: ignore
+    return head.commit
 
 
 def get_commit_message(commit: Commit) -> str:
-    return commit.message  # type: ignore
+    return str(commit.message)
+
+
+def get_commit_summary(commit: Commit) -> str:
+    return str(commit.summary)
 
 
 def update_commit_message(message_file: str):
@@ -208,7 +214,7 @@ def find_git_dir() -> str:
     repo = Repo(".", search_parent_directories=True)
     if not repo.git_dir:
         raise RuntimeError("Not a Git repository")
-    return repo.git_dir
+    return str(repo.git_dir)
 
 
 def fail(message: str) -> NoReturn:
