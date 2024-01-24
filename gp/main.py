@@ -30,7 +30,7 @@ def main(argv: list[str] = []):
     load_dotenv()
 
     if args.message_file:
-        update_commit_message(args.message_file)
+        update_commit_message_file(args.message_file)
     else:
         install_commit_message_hook()
         publish_changes()
@@ -41,7 +41,7 @@ def publish_changes():
     # 2. List existing Merge Requests for my user
     # 3. Check current branch is master (or main)
     # 4. Go through all commits (older to newer) above origin/master:
-    #   1. Check the commit have a Change-Id field
+    #   1. Ensure the commit has a Change-Id field
     #   2. Remember the name of the current branch
     #   3. Create a branch named "{username}/{change_id}" from the current branch if it doesn't exist
     #   4. Switch to this branch
@@ -81,16 +81,14 @@ def publish_changes():
     previous_branch = active_branch
 
     for commit in reversed(commits):
-        commit_message = get_commit_message(commit)
-        change_id = get_change_id(commit_message)
-        if not change_id:
-            fail(f"Commit {commit.hexsha} doesn't have a Change-Id field.")
+        commit, change_id = get_or_set_change_id(commit)
 
         current_branch = create_branch(repo, change_id, commit)
 
         push_branch(remote, current_branch)
 
         title = get_commit_summary(commit)
+        commit_message = get_commit_message(commit)
         description = strip_change_id(commit_message)
 
         change_url = project.create_or_update_change(
@@ -108,6 +106,17 @@ def ensure_clean_working_directory(repo: Repo) -> bool:
 
 def ensure_main_branch(repo: Repo) -> bool:
     return repo.active_branch.name in ["main", "master"]
+
+
+def get_or_set_change_id(commit: Commit) -> tuple[Commit, str]:
+    commit_message = get_commit_message(commit)
+    change_id = get_change_id(commit_message)
+
+    if not change_id:
+        change_id = create_change_id()
+        commit = set_change_id(commit, change_id)
+
+    return commit, change_id
 
 
 def create_branch(repo: Repo, change_id: str, commit: Commit):
@@ -163,17 +172,28 @@ def get_commit_summary(commit: Commit) -> str:
     return str(commit.summary)
 
 
-def update_commit_message(message_file: str):
+def update_commit_message_file(message_file: str):
     with open(message_file, "r+") as file:
         message = file.read()
         change_id = get_change_id(message)
 
         if not change_id:
             change_id = create_change_id()
-            updated_message = f"{message.strip()}\n\nChange-Id: {change_id}\n"
+            updated_message = append_change_id_in_commit_message(change_id, message)
             file.seek(0)
             file.write(updated_message)
             file.truncate()
+
+
+def append_change_id_in_commit_message(change_id: str, message: str):
+    return f"{message.strip()}\n\nChange-Id: {change_id}\n"
+
+
+def set_change_id(commit: Commit, change_id: str):
+    commit_message = get_commit_message(commit)
+    commit_message = append_change_id_in_commit_message(change_id, commit_message)
+
+    return commit.replace(message=commit_message)
 
 
 def create_change_id():

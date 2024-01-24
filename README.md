@@ -25,6 +25,5 @@ $ git-publish
 
 # Next
 
-- Automatically add the Change-Id to past commits
 - Add nested blocking dependencies (available in GitLab 16.6+)
 - Do not search for all MRs
