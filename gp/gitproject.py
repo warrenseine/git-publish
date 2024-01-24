@@ -39,7 +39,7 @@ class GithubProject(GitProject):
     def __init__(self, project_namespace: str):
         github_token = getenv("GITHUB_TOKEN")
         if not github_token:
-            raise EnvironmentError(f"Empty environment variable GITHUB_TOKEN.")
+            raise EnvironmentError("Empty environment variable GITHUB_TOKEN.")
         self.github = Github(github_token)
         self.project = self.github.get_repo(project_namespace)
         self.pull_requests = self.project.get_pulls()
@@ -81,7 +81,7 @@ class GitlabProject(GitProject):
     def __init__(self, project_namespace: str):
         gitlab_token = getenv("GITLAB_TOKEN")
         if not gitlab_token:
-            raise EnvironmentError(f"Empty environment variable GITLAB_TOKEN.")
+            raise EnvironmentError("Empty environment variable GITLAB_TOKEN.")
         self.gitlab = Gitlab("https://gitlab.com", private_token=gitlab_token)
         project_manager: ProjectManager = self.gitlab.projects  # type: ignore
         self.project = project_manager.get(project_namespace, lazy=True)

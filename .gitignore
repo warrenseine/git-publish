@@ -1,3 +1,5 @@
+dist/
 __pycache__/
 .DS_Store
 .env
+.ruff_cache/

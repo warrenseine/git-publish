@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "git-publish"
+version = "0.1.0"
+description = ""
+authors = ["Warren Seine <warren.seine@onfido.com>"]
+readme = "README.md"
+packages = [
+    { include = "gp" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pre-commit = "^3.6.0"
+gitpython = "^3.1.41"
+python-dotenv = "^1.0.0"
+python-gitlab = "^4.4.0"
+pygithub = "^2.1.1"
+giturlparse = "^0.12.0"
+ruff = "^0.1.14"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
