@@ -43,13 +43,13 @@ def publish_changes():
     # 4. Go through all commits (older to newer) above origin/master:
     #   1. Check the commit have a Change-Id field
     #   2. Remember the name of the current branch
-    #   3. Create a branch named "{username}-{change_id}" from the current branch if it doesn't exist
+    #   3. Create a branch named "{username}/{change_id}" from the current branch if it doesn't exist
     #   4. Switch to this branch
     #   5. Cherry-pick the commit
     #   6. Force-push the branch
-    #   7. Find a Merge Request with source branch "{username}-{change_id}"
+    #   7. Find a Merge Request with source branch "{username}/{change_id}"
     #   8. Update target branch on Merge Request to previous branch if found
-    #   9. Create a Merge Request from "{username}-{change_id}" to previous branch otherwise
+    #   9. Create a Merge Request from "{username}/{change_id}" to previous branch otherwise
     #   10. Delete previous branch locally
     repo = Repo(".", search_parent_directories=True)
     if not ensure_clean_working_directory(repo):
@@ -179,7 +179,7 @@ def update_commit_message(message_file: str):
 def create_change_id():
     user = getuser()
     hash = getrandbits(16)
-    return f"{user}-{hash:04x}"
+    return f"{user}/{hash:04x}"
 
 
 def get_change_id(message: str) -> Optional[str]:
