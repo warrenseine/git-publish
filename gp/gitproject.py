@@ -24,7 +24,7 @@ class GitProject(ABC):
 
 def build_git_project(remote: Remote) -> GitProject:
     git_url = parse(remote.url)
-    project_namespace = f"{git_url.owner}/{git_url.repo}"  # type: ignore
+    project_namespace = git_url.pathname.removesuffix(".git")  # type: ignore
 
     if git_url.platform == "gitlab":
         return GitlabProject(project_namespace)
@@ -103,7 +103,7 @@ class GitlabProject(GitProject):
         return merge_request.web_url
 
     def __list_merge_requests(self) -> list[MergeRequest]:
-        return self.merge_requests.list()  # type: ignore
+        return self.merge_requests.list(get_all=True)  # type: ignore
 
     def __find_merge_request(self, source_branch: str) -> Optional[MergeRequest]:
         for merge_request in self.__list_merge_requests():
@@ -129,6 +129,7 @@ class GitlabProject(GitProject):
                 "source_branch": source_branch.name,
                 "target_branch": target_branch.name,
                 "title": title,
+                "remove_source_branch": True,
             }
         )
         merge_request: MergeRequest = response  # type: ignore

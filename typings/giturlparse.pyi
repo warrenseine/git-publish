@@ -14,6 +14,7 @@ class GitUrl:
     name: str
     groups: list[str]
     path: str
+    pathname: str
     path_raw: str
     branch: str
 
