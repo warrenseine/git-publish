@@ -17,7 +17,12 @@ from giturlparse import parse
 class GitProject(ABC):
     @abstractmethod
     def create_or_update_change(
-        self, change_id: str, source_branch: Head, target_branch: Head, title: str
+        self,
+        change_id: str,
+        source_branch: Head,
+        target_branch: Head,
+        title: str,
+        description: str,
     ) -> str:
         ...
 
@@ -45,7 +50,12 @@ class GithubProject(GitProject):
         self.pull_requests = self.project.get_pulls()
 
     def create_or_update_change(
-        self, change_id: str, source_branch: Head, target_branch: Head, title: str
+        self,
+        change_id: str,
+        source_branch: Head,
+        target_branch: Head,
+        title: str,
+        description: str,
     ) -> str:
         pull_request = self.__find_pull_request(change_id)
 
@@ -53,7 +63,7 @@ class GithubProject(GitProject):
             self.__update_pull_request(pull_request, target_branch, title)
         else:
             pull_request = self.__create_pull_request(
-                source_branch, target_branch, title
+                source_branch, target_branch, title, description
             )
 
         return pull_request.html_url
@@ -70,10 +80,13 @@ class GithubProject(GitProject):
         pull_request.edit(base=target_branch.name, title=title)
 
     def __create_pull_request(
-        self, source_branch: Head, target_branch: Head, title: str
+        self, source_branch: Head, target_branch: Head, title: str, description: str
     ) -> PullRequest:
         return self.project.create_pull(
-            title, "", target_branch.name, source_branch.name
+            title=title,
+            body=description,
+            base=target_branch.name,
+            head=source_branch.name,
         )
 
 
@@ -89,7 +102,12 @@ class GitlabProject(GitProject):
         self.merge_requests: ProjectMergeRequestManager = self.project.mergerequests
 
     def create_or_update_change(
-        self, change_id: str, source_branch: Head, target_branch: Head, title: str
+        self,
+        change_id: str,
+        source_branch: Head,
+        target_branch: Head,
+        title: str,
+        description: str,
     ) -> str:
         merge_request = self.__find_merge_request(change_id)
 
@@ -97,7 +115,7 @@ class GitlabProject(GitProject):
             self.__update_merge_request(merge_request, target_branch, title)
         else:
             merge_request = self.__create_merge_request(
-                source_branch, target_branch, title
+                source_branch, target_branch, title, description
             )
 
         return merge_request.web_url
@@ -122,13 +140,14 @@ class GitlabProject(GitProject):
         editable_merge_request.save()
 
     def __create_merge_request(
-        self, source_branch: Head, target_branch: Head, title: str
+        self, source_branch: Head, target_branch: Head, title: str, description: str
     ):
         response = self.merge_requests.create(
             {
                 "source_branch": source_branch.name,
                 "target_branch": target_branch.name,
                 "title": title,
+                "description": description,
                 "remove_source_branch": True,
             }
         )

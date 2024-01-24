@@ -81,7 +81,8 @@ def publish_changes():
     previous_branch = active_branch
 
     for commit in reversed(commits):
-        change_id = get_change_id(get_commit_message(commit))
+        commit_message = get_commit_message(commit)
+        change_id = get_change_id(commit_message)
         if not change_id:
             fail(f"Commit {commit.hexsha} doesn't have a Change-Id field.")
 
@@ -90,9 +91,10 @@ def publish_changes():
         push_branch(remote, current_branch)
 
         title = get_commit_summary(commit)
+        description = strip_change_id(commit_message)
 
         change_url = project.create_or_update_change(
-            change_id, current_branch, previous_branch, title
+            change_id, current_branch, previous_branch, title, description
         )
 
         info(f"{commit.summary} 🔗 {change_url}")
@@ -190,6 +192,11 @@ def get_change_id(message: str) -> Optional[str]:
         return None
     change_id = change_id_line.lstrip("Change-Id:").strip()
     return change_id
+
+
+def strip_change_id(message: str) -> str:
+    lines = [line for line in message.split("\n") if not line.startswith("Change-Id:")]
+    return "\n".join(lines).rstrip()
 
 
 def install_commit_message_hook():
