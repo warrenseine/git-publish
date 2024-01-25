@@ -42,15 +42,14 @@ def publish_changes():
     # 3. Check current branch is master (or main)
     # 4. Go through all commits (older to newer) above origin/master:
     #   1. Ensure the commit has a Change-Id field
-    #   2. Remember the name of the current branch
-    #   3. Create a branch named "{username}/{change_id}" from the current branch if it doesn't exist
-    #   4. Switch to this branch
-    #   5. Cherry-pick the commit
-    #   6. Force-push the branch
-    #   7. Find a Merge Request with source branch "{username}/{change_id}"
-    #   8. Update target branch on Merge Request to previous branch if found
-    #   9. Create a Merge Request from "{username}/{change_id}" to previous branch otherwise
-    #   10. Delete previous branch locally
+    #   2. Rebase the commit onto its updated parent
+    #   3. Create a branch named "{username}/{change_id}" pointing to the commit
+    #   4. Force-push the branch
+    #   5. Find a Merge Request with source branch "{username}/{change_id}"
+    #   6. Update target branch on Merge Request to previous branch if found
+    #   7. Create a Merge Request from "{username}/{change_id}" to previous branch otherwise
+    #   8. Delete previous branch locally
+    # 5. Reset master to the original state
     repo = Repo(".", search_parent_directories=True)
     if not ensure_clean_working_directory(repo):
         fail(
@@ -67,11 +66,13 @@ def publish_changes():
 
     remote = repo.remote(tracking_branch.remote_name)
 
-    commit1 = get_head_commit(active_branch)
-    commit2 = get_head_commit(tracking_branch)
-    commit3 = get_most_recent_common_ancestor(commit1, commit2)
+    active_branch_commit = get_head_commit(active_branch)
+    tracking_branch_commit = get_head_commit(tracking_branch)
+    common_ancestor_commit = get_most_recent_common_ancestor(
+        active_branch_commit, tracking_branch_commit
+    )
 
-    commits = collect_commits_between(commit1, commit3)
+    commits = collect_commits_between(active_branch_commit, common_ancestor_commit)
 
     if not commits:
         fail("Nothing to publish.")
@@ -79,9 +80,12 @@ def publish_changes():
     project = build_git_project(remote)
 
     previous_branch = active_branch
+    previous_commit = common_ancestor_commit
 
     for commit in reversed(commits):
         commit, change_id = get_or_set_change_id(commit)
+
+        commit = update_commit_parent(commit, previous_commit)
 
         current_branch = create_branch(repo, change_id, commit)
 
@@ -98,8 +102,11 @@ def publish_changes():
         info(f"{commit.summary}\n  🔗 {change_url}\n")
 
         previous_branch = current_branch
+        previous_commit = commit
 
         delete_branch(repo, current_branch)
+
+    update_branch_reference(active_branch, previous_commit)
 
 
 def ensure_clean_working_directory(repo: Repo) -> bool:
@@ -196,6 +203,14 @@ def set_change_id(commit: Commit, change_id: str):
     commit_message = append_change_id_in_commit_message(change_id, commit_message)
 
     return commit.replace(message=commit_message)
+
+
+def update_commit_parent(commit: Commit, parent: Commit) -> Commit:
+    return commit.replace(parents=[parent])
+
+
+def update_branch_reference(branch: Head, commit: Commit):
+    branch.commit = commit
 
 
 def delete_branch(repo: Repo, branch: Head):
