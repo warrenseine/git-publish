@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 from dotenv import load_dotenv
 from getpass import getuser
-from git import Head
 from git.objects import Commit
+from git.refs import Head
 from git.remote import Remote
 from git.repo import Repo
 from os import chmod
@@ -99,6 +99,8 @@ def publish_changes():
 
         previous_branch = current_branch
 
+        delete_branch(repo, current_branch)
+
 
 def ensure_clean_working_directory(repo: Repo) -> bool:
     return not repo.is_dirty() and not repo.untracked_files
@@ -194,6 +196,10 @@ def set_change_id(commit: Commit, change_id: str):
     commit_message = append_change_id_in_commit_message(change_id, commit_message)
 
     return commit.replace(message=commit_message)
+
+
+def delete_branch(repo: Repo, branch: Head):
+    repo.delete_head(branch)
 
 
 def create_change_id():
