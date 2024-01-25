@@ -95,7 +95,7 @@ def publish_changes():
             change_id, current_branch, previous_branch, title, description
         )
 
-        info(f"{commit.summary} 🔗 {change_url}")
+        info(f"{commit.summary}\n  🔗 {change_url}\n")
 
         previous_branch = current_branch
 
