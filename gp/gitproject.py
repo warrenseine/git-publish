@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from os import getenv
-from typing import Optional
+from typing import cast, Generator, Optional
 from git import Head, Remote
 from github import Github
 from github.PullRequest import PullRequest
@@ -120,8 +120,9 @@ class GitlabProject(GitProject):
 
         return merge_request.web_url
 
-    def __list_merge_requests(self) -> list[MergeRequest]:
-        return self.merge_requests.list(get_all=True)  # type: ignore
+    def __list_merge_requests(self) -> Generator[MergeRequest, None, None]:
+        mrs = self.merge_requests.list(iterator=True)
+        return cast(Generator[MergeRequest, None, None], mrs)
 
     def __find_merge_request(self, source_branch: str) -> Optional[MergeRequest]:
         for merge_request in self.__list_merge_requests():
