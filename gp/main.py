@@ -17,6 +17,8 @@ from gp.gitproject import build_git_project
 version = "0.0.1"
 program = "git-publish"
 
+main_branches = ["main", "master", "development"]
+
 
 def main(argv: list[str] = []):
     parser = ArgumentParser(prog=program, description="Publish atomic Git commits.")
@@ -39,7 +41,7 @@ def main(argv: list[str] = []):
 def publish_changes():
     # 1. Ensure clean working directory.
     # 2. List existing Merge Requests for my user
-    # 3. Check current branch is master (or main)
+    # 3. Ensure current branch is a main branch
     # 4. Go through all commits (older to newer) above origin/master:
     #   1. Ensure the commit has a Change-Id field
     #   2. Rebase the commit onto its updated parent
@@ -56,7 +58,9 @@ def publish_changes():
             f"Working directory is not clean. Clean it first before calling {program}."
         )
     if not ensure_main_branch(repo):
-        fail("Current branch must be 'main' or 'master' to publish changes.")
+        fail(
+            f"Current branch must be one of the following branches to publish: #{', '.join(main_branches)}."
+        )
 
     active_branch = repo.active_branch
     tracking_branch = active_branch.tracking_branch()
@@ -114,7 +118,7 @@ def ensure_clean_working_directory(repo: Repo) -> bool:
 
 
 def ensure_main_branch(repo: Repo) -> bool:
-    return repo.active_branch.name in ["main", "master"]
+    return repo.active_branch.name in main_branches
 
 
 def get_or_set_change_id(commit: Commit) -> tuple[Commit, str]:
