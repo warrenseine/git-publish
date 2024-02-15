@@ -218,7 +218,7 @@ def update_branch_reference(branch: Head, commit: Commit):
 
 
 def delete_branch(repo: Repo, branch: Head):
-    repo.delete_head(branch)
+    repo.delete_head(branch, force=True)
 
 
 def create_change_id():
