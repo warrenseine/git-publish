@@ -26,4 +26,3 @@ $ git-publish
 # Next
 
 - Add nested blocking dependencies (available in GitLab 16.6+)
-- Do not search for all MRs

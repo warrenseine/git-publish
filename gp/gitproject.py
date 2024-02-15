@@ -121,7 +121,7 @@ class GitlabProject(GitProject):
         return merge_request.web_url
 
     def __list_merge_requests(self) -> Generator[MergeRequest, None, None]:
-        mrs = self.merge_requests.list(iterator=True)
+        mrs = self.merge_requests.list(iterator=True, state="opened")
         return cast(Generator[MergeRequest, None, None], mrs)
 
     def __find_merge_request(self, source_branch: str) -> Optional[MergeRequest]:
