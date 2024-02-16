@@ -39,7 +39,7 @@ def main(argv: list[str] = []):
 
 
 def publish_changes():
-    # 1. Ensure clean working directory.
+    # 1. Stash working directory if dirty
     # 2. List existing Merge Requests for my user
     # 3. Ensure current branch is a main branch
     # 4. Go through all commits (older to newer) above origin/master:
@@ -52,11 +52,13 @@ def publish_changes():
     #   7. Create a Merge Request from "{username}/{change_id}" to previous branch otherwise
     #   8. Delete previous branch locally
     # 5. Reset master to the original state
+    # 6. Unstash if needed
     repo = Repo(".", search_parent_directories=True)
-    if not ensure_clean_working_directory(repo):
-        fail(
-            f"Working directory is not clean. Clean it first before calling {program}."
-        )
+
+    repo_is_dirty = dirty_working_directory(repo)
+    if repo_is_dirty:
+        stash(repo)
+
     if not ensure_main_branch(repo):
         fail(
             f"Current branch must be one of the following branches to publish: #{', '.join(main_branches)}."
@@ -112,9 +114,12 @@ def publish_changes():
 
     update_branch_reference(active_branch, previous_commit)
 
+    if repo_is_dirty:
+        unstash(repo)
 
-def ensure_clean_working_directory(repo: Repo) -> bool:
-    return not repo.is_dirty() and not repo.untracked_files
+
+def dirty_working_directory(repo: Repo) -> bool:
+    return repo.is_dirty() or bool(repo.untracked_files)
 
 
 def ensure_main_branch(repo: Repo) -> bool:
@@ -219,6 +224,20 @@ def update_branch_reference(branch: Head, commit: Commit):
 
 def delete_branch(repo: Repo, branch: Head):
     repo.delete_head(branch, force=True)
+
+
+def stash(repo: Repo):
+    repo.git.stash(
+        "push",
+        "--include-untracked",
+        "--quiet",
+        "--message",
+        "git-publish temporary stash",
+    )
+
+
+def unstash(repo: Repo):
+    repo.git.stash("pop", "--quiet")
 
 
 def create_change_id():
