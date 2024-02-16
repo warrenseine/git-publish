@@ -39,26 +39,14 @@ def main(argv: list[str] = []):
 
 
 def publish_changes():
-    # 1. Stash working directory if dirty
-    # 2. List existing Merge Requests for my user
-    # 3. Ensure current branch is a main branch
-    # 4. Go through all commits (older to newer) above origin/master:
-    #   1. Ensure the commit has a Change-Id field
-    #   2. Rebase the commit onto its updated parent
-    #   3. Create a branch named "{username}/{change_id}" pointing to the commit
-    #   4. Force-push the branch
-    #   5. Find a Merge Request with source branch "{username}/{change_id}"
-    #   6. Update target branch on Merge Request to previous branch if found
-    #   7. Create a Merge Request from "{username}/{change_id}" to previous branch otherwise
-    #   8. Delete previous branch locally
-    # 5. Reset master to the original state
-    # 6. Unstash if needed
     repo = Repo(".", search_parent_directories=True)
 
+    # 1. Stash working directory if dirty
     repo_is_dirty = dirty_working_directory(repo)
     if repo_is_dirty:
         stash(repo)
 
+    # 2. Ensure current branch is a main branch
     if not ensure_main_branch(repo):
         fail(
             f"Current branch must be one of the following branches to publish: #{', '.join(main_branches)}."
@@ -78,6 +66,7 @@ def publish_changes():
         active_branch_commit, tracking_branch_commit
     )
 
+    # 3. Gather all unmerged commits to publish
     commits = collect_commits_between(active_branch_commit, common_ancestor_commit)
 
     if not commits:
@@ -88,19 +77,25 @@ def publish_changes():
     previous_branch = active_branch
     previous_commit = common_ancestor_commit
 
+    # 4. Go through all commits (from older to newer):
     for commit in reversed(commits):
+        # 1. Ensure the commit has a Change-Id field
         commit, change_id = get_or_set_change_id(commit)
 
+        # 2. Rebase the commit onto its updated parent
         commit = update_commit_parent(commit, previous_commit)
 
+        # 3. Create a branch named "{username}/{change_id}" pointing to the commit
         current_branch = create_branch(repo, change_id, commit)
 
+        # 4. Force-push the branch
         push_branch(remote, current_branch)
 
         title = get_commit_summary(commit)
         commit_message = get_commit_message(commit)
         description = strip_change_id(commit_message)
 
+        # 5. Create or update existing MR/PR with source branch "{username}/{change_id}" to target previous branch
         change_url = project.create_or_update_change(
             change_id, current_branch, previous_branch, title, description
         )
@@ -110,10 +105,13 @@ def publish_changes():
         previous_branch = current_branch
         previous_commit = commit
 
+        # 6. Delete previous branch locally
         delete_branch(repo, current_branch)
 
+    # 5. Reset master to the original state
     update_branch_reference(active_branch, previous_commit)
 
+    # 6. Unstash if needed
     if repo_is_dirty:
         unstash(repo)
 
