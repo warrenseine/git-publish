@@ -1,0 +1,9 @@
+#!/bin/sh
+
+export GITLAB_URL=
+export GITLAB_TOKEN=
+export GITLAB_BRANCH_PREFIX=
+PROJECT_PATH=
+PACKAGE_NAME=gp
+
+poetry -C "$PROJECT_PATH" run python -m $PACKAGE_NAME "$@"
