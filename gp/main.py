@@ -5,7 +5,7 @@ from git.objects import Commit
 from git.refs import Head
 from git.remote import Remote
 from git.repo import Repo
-from os import chmod
+from os import chmod, getenv
 from os.path import join, exists
 from random import getrandbits
 from textwrap import dedent
@@ -239,7 +239,7 @@ def unstash(repo: Repo):
 
 
 def create_change_id():
-    user = getuser()
+    user = getenv("GITLAB_BRANCH_PREFIX") or getuser()
     hash = getrandbits(16)
     return f"{user}/{hash:04x}"
 
