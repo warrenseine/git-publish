@@ -245,9 +245,8 @@ def create_change_id():
 
 
 def get_change_id(message: str) -> Optional[str]:
-    last_paragraph = message.split("\n\n")[-1]
     change_id_line = next(
-        (line for line in last_paragraph.splitlines() if line.startswith("Change-Id:")),
+        (line for line in message.splitlines() if line.startswith("Change-Id:")),
         None,
     )
     if not change_id_line:
