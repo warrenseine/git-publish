@@ -17,7 +17,7 @@ from gp.gitproject import build_git_project
 version = "0.0.1"
 program = "git-publish"
 
-main_branches = ["main", "master", "development"]
+main_branches = ["main", "master", "development", "develop"]
 
 
 def main(argv: list[str] = []):
