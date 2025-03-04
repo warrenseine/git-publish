@@ -46,7 +46,9 @@ def publish_changes():
     if repo_is_dirty:
         stash(repo)
 
-    # 2. Ensure current branch is a main branch
+    # 2. Check repo sanity
+    fetch(repo)
+
     if not ensure_main_branch(repo):
         fail(
             f"Current branch must be one of the following branches to publish: #{', '.join(main_branches)}."
@@ -65,6 +67,11 @@ def publish_changes():
     common_ancestor_commit = get_most_recent_common_ancestor(
         active_branch_commit, tracking_branch_commit
     )
+
+    if common_ancestor_commit != tracking_branch_commit:
+        fail(
+            f"Branch {active_branch} is not up-to-date with its tracking branch {tracking_branch}."
+        )
 
     # 3. Gather all unmerged commits to publish
     commits = collect_commits_between(active_branch_commit, common_ancestor_commit)
@@ -236,6 +243,10 @@ def stash(repo: Repo):
 
 def unstash(repo: Repo):
     repo.git.stash("pop", "--quiet")
+
+
+def fetch(repo: Repo):
+    repo.git.fetch("--all", "--quiet")
 
 
 def create_change_id():
