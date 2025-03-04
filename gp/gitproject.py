@@ -23,8 +23,7 @@ class GitProject(ABC):
         target_branch: Head,
         title: str,
         description: str,
-    ) -> str:
-        ...
+    ) -> str: ...
 
 
 def build_git_project(remote: Remote) -> GitProject:
