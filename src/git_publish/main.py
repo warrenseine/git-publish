@@ -43,84 +43,86 @@ def publish_changes():
 
     # 1. Stash working directory if dirty
     repo_is_dirty = dirty_working_directory(repo)
-    if repo_is_dirty:
-        stash(repo)
 
-    # 2. Check repo sanity
-    fetch(repo)
+    try:
+        if repo_is_dirty:
+            stash(repo)
 
-    if not ensure_main_branch(repo):
-        fail(
-            f"Current branch must be one of the following branches to publish: #{', '.join(main_branches)}."
+        # 2. Check repo sanity
+        fetch(repo)
+
+        if not ensure_main_branch(repo):
+            fail(
+                f"Current branch must be one of the following branches to publish: #{', '.join(main_branches)}."
+            )
+
+        active_branch = repo.active_branch
+        tracking_branch = active_branch.tracking_branch()
+
+        if tracking_branch is None:
+            fail(f"Current branch {active_branch} is not tracking.")
+
+        remote = repo.remote(tracking_branch.remote_name)
+
+        active_branch_commit = get_head_commit(active_branch)
+        tracking_branch_commit = get_head_commit(tracking_branch)
+        common_ancestor_commit = get_most_recent_common_ancestor(
+            active_branch_commit, tracking_branch_commit
         )
 
-    active_branch = repo.active_branch
-    tracking_branch = active_branch.tracking_branch()
+        if common_ancestor_commit != tracking_branch_commit:
+            fail(
+                f"Branch {active_branch} is not up-to-date with its tracking branch {tracking_branch}."
+            )
 
-    if tracking_branch is None:
-        fail(f"Current branch {active_branch} is not tracking.")
+        # 3. Gather all unmerged commits to publish
+        commits = collect_commits_between(active_branch_commit, common_ancestor_commit)
 
-    remote = repo.remote(tracking_branch.remote_name)
+        if not commits:
+            fail("Nothing to publish.")
 
-    active_branch_commit = get_head_commit(active_branch)
-    tracking_branch_commit = get_head_commit(tracking_branch)
-    common_ancestor_commit = get_most_recent_common_ancestor(
-        active_branch_commit, tracking_branch_commit
-    )
+        project = build_git_project(remote)
 
-    if common_ancestor_commit != tracking_branch_commit:
-        fail(
-            f"Branch {active_branch} is not up-to-date with its tracking branch {tracking_branch}."
-        )
+        previous_branch = active_branch
+        previous_commit = common_ancestor_commit
 
-    # 3. Gather all unmerged commits to publish
-    commits = collect_commits_between(active_branch_commit, common_ancestor_commit)
+        # 4. Go through all commits (from older to newer):
+        for commit in reversed(commits):
+            # 1. Ensure the commit has a Change-Id field
+            commit, change_id = get_or_set_change_id(commit)
 
-    if not commits:
-        fail("Nothing to publish.")
+            # 2. Rebase the commit onto its updated parent
+            commit = update_commit_parent(commit, previous_commit)
 
-    project = build_git_project(remote)
+            # 3. Create a branch named "{username}/{change_id}" pointing to the commit
+            current_branch = create_branch(repo, change_id, commit)
 
-    previous_branch = active_branch
-    previous_commit = common_ancestor_commit
+            # 4. Force-push the branch
+            push_branch(remote, current_branch)
 
-    # 4. Go through all commits (from older to newer):
-    for commit in reversed(commits):
-        # 1. Ensure the commit has a Change-Id field
-        commit, change_id = get_or_set_change_id(commit)
+            title = get_commit_summary(commit)
+            commit_message = get_commit_message(commit)
+            description = strip_change_id(commit_message)
 
-        # 2. Rebase the commit onto its updated parent
-        commit = update_commit_parent(commit, previous_commit)
+            # 5. Create or update existing MR/PR with source branch "{username}/{change_id}" to target previous branch
+            change_url = project.create_or_update_change(
+                change_id, current_branch, previous_branch, title, description
+            )
 
-        # 3. Create a branch named "{username}/{change_id}" pointing to the commit
-        current_branch = create_branch(repo, change_id, commit)
+            info(f"{commit.summary}\n  🔗 {change_url}\n")
 
-        # 4. Force-push the branch
-        push_branch(remote, current_branch)
+            previous_branch = current_branch
+            previous_commit = commit
 
-        title = get_commit_summary(commit)
-        commit_message = get_commit_message(commit)
-        description = strip_change_id(commit_message)
+            # 6. Delete previous branch locally
+            delete_branch(repo, current_branch)
 
-        # 5. Create or update existing MR/PR with source branch "{username}/{change_id}" to target previous branch
-        change_url = project.create_or_update_change(
-            change_id, current_branch, previous_branch, title, description
-        )
-
-        info(f"{commit.summary}\n  🔗 {change_url}\n")
-
-        previous_branch = current_branch
-        previous_commit = commit
-
-        # 6. Delete previous branch locally
-        delete_branch(repo, current_branch)
-
-    # 5. Reset master to the original state
-    update_branch_reference(active_branch, previous_commit)
-
-    # 6. Unstash if needed
-    if repo_is_dirty:
-        unstash(repo)
+        # 5. Reset master to the original state
+        update_branch_reference(active_branch, previous_commit)
+    finally:
+        # 6. Unstash if needed
+        if repo_is_dirty:
+            unstash(repo)
 
 
 def dirty_working_directory(repo: Repo) -> bool:
