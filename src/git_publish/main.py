@@ -11,7 +11,7 @@ from random import getrandbits
 from textwrap import dedent
 from typing import NoReturn, Optional
 
-from gp.gitproject import build_git_project
+from git_publish.gitproject import build_git_project
 
 
 version = "0.0.1"

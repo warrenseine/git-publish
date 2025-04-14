@@ -7,11 +7,11 @@ Push stacked atomic Pull/Merge Requests.
 Install `git-publish`:
 
 ```sh
-$ poetry install
-$ poetry build
-$ pip install dist/*.whl
-$ cp git-publish /usr/local/bin
+$ uv build
+$ uv tool install . -e
 ```
+
+Then don't forget to set the GITLAB_URL, GITLAB_TOKEN, GITLAB_BRANCH_PREFIX environment variables in your profile.
 
 Run it in your repository:
 

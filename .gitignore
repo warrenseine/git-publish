@@ -1,5 +1,14 @@
-dist/
+# Python-generated files
 __pycache__/
-.DS_Store
-.env
 .ruff_cache/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Configuration
+.env
