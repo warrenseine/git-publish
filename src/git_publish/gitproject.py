@@ -28,7 +28,7 @@ class GitProject(ABC):
 
 def build_git_project(remote: Remote) -> GitProject:
     git_url = parse(remote.url)
-    project_namespace = git_url.pathname.removesuffix(".git")  # type: ignore
+    project_namespace = git_url.pathname.removesuffix(".git").removeprefix("/")  # type: ignore
 
     if git_url.platform == "gitlab":
         return GitlabProject(project_namespace)
