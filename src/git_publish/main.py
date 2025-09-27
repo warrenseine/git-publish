@@ -252,7 +252,7 @@ def fetch(repo: Repo):
 
 
 def create_change_id():
-    user = getenv("GITLAB_BRANCH_PREFIX") or getuser()
+    user = getenv("GITPUBLISH_BRANCH_PREFIX") or getuser()
     hash = getrandbits(16)
     return f"{user}/{hash:04x}"
 
