@@ -152,7 +152,10 @@ def create_branch(repo: Repo, change_id: str, commit: Commit):
 
 def push_branch(remote: Remote, branch: Head):
     refspec = f"refs/heads/{branch.name}:refs/heads/{branch.name}"
-    remote.push(refspec, force=True)
+    try:
+        remote.repo.git.push(remote.name, refspec, "--force")
+    except Exception as error:
+        fail(f"Failed to push branch {branch.name} to {remote.name}: {error}")
 
 
 def collect_commits_between(top: Commit, bottom: Commit) -> list[Commit]:
