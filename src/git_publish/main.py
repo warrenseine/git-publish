@@ -38,6 +38,15 @@ def main(argv: list[str] = []):
         publish_changes()
 
 
+def get_change_id_prefix() -> str:
+    """Return the configured Change-Id prefix, e.g. "Change-Id:".
+
+    Controlled by the GITPUBLISH_CHANGE_ID_PREFIX environment variable.
+    Defaults to "Change-Id:" if unset or empty.
+    """
+    return getenv("GITPUBLISH_CHANGE_ID_PREFIX") or "Change-Id:"
+
+
 def publish_changes():
     repo = Repo(".", search_parent_directories=True)
 
@@ -214,7 +223,8 @@ def update_commit_message_file(message_file: str):
 
 
 def append_change_id_in_commit_message(change_id: str, message: str):
-    return f"{message.strip()}\n\nChange-Id: {change_id}\n"
+    prefix = get_change_id_prefix()
+    return f"{message.strip()}\n\n{prefix} {change_id}\n"
 
 
 def set_change_id(commit: Commit, change_id: str):
@@ -261,18 +271,20 @@ def create_change_id():
 
 
 def get_change_id(message: str) -> Optional[str]:
+    prefix = get_change_id_prefix()
     change_id_line = next(
-        (line for line in message.splitlines() if line.startswith("Change-Id:")),
+        (line for line in message.splitlines() if line.startswith(prefix)),
         None,
     )
     if not change_id_line:
         return None
-    change_id = change_id_line.lstrip("Change-Id:").strip()
+    change_id = change_id_line.split(prefix, 1)[1].strip()
     return change_id
 
 
 def strip_change_id(message: str) -> str:
-    lines = [line for line in message.split("\n") if not line.startswith("Change-Id:")]
+    prefix = get_change_id_prefix()
+    lines = [line for line in message.split("\n") if not line.startswith(prefix)]
     return "\n".join(lines).rstrip()
 
 

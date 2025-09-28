@@ -13,6 +13,12 @@ $ uv tool install . -e
 
 Then don't forget to set the GITLAB_URL, GITLAB_TOKEN, GITPUBLISH_BRANCH_PREFIX environment variables in your profile.
 
+Optional configuration:
+
+- `GITPUBLISH_CHANGE_ID_PREFIX` — prefix used in commit messages for change ids.
+  - Default: `Change-Id:`
+  - Example: set to `Change:` to produce lines like `Change: user/1a2b`.
+
 Run it in your repository:
 
 ```sh
