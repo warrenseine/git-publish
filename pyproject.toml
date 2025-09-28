@@ -49,9 +49,15 @@ dev-dependencies = [
     "ruff >=0.9.9,<1",
     "pyright >=1.1.348,<2",
     "pytest >=7.0.0,<9",
+    "taskipy >=1.12.2,<2",
 ]
 
 [tool.pytest.ini_options]
 addopts = "-q"
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.taskipy.tasks]
+lint = "uv run ruff check --output-format=concise . && uv run pyright"
+format = "uv run ruff check --fix ."
+test = "uv run pytest"
