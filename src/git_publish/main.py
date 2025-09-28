@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from importlib.metadata import PackageNotFoundError, version as package_version
 from dotenv import load_dotenv
 from getpass import getuser
 from git.objects import Commit
@@ -14,7 +15,10 @@ from typing import NoReturn, Optional
 from git_publish.gitproject import build_git_project
 
 
-version = "0.0.1"
+try:
+    __version__ = package_version("git-publish")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 program = "git-publish"
 
 main_branches = ["main", "master", "development", "develop"]
@@ -23,7 +27,7 @@ main_branches = ["main", "master", "development", "develop"]
 def main(argv: list[str] = []):
     parser = ArgumentParser(prog=program, description="Publish atomic Git commits.")
     parser.add_argument(
-        "-v", "--version", action="version", version=f"%(prog)s {version}"
+        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
     )
     parser.add_argument("-m", "--message-file", action="store")
 
