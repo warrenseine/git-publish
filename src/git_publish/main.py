@@ -12,7 +12,7 @@ from random import getrandbits
 from textwrap import dedent
 from typing import NoReturn, Optional
 
-from git_publish.gitproject import build_git_project
+from git_publish.git_project import build_git_project
 
 
 try:
