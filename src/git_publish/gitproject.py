@@ -135,7 +135,7 @@ class GitlabProject(GitProject):
         editable_merge_request: ProjectMergeRequest = self.merge_requests.get(
             merge_request.iid, lazy=True
         )  # type: ignore
-        editable_merge_request.target_branch = str(target_branch)
+        editable_merge_request.target_branch = target_branch.name
         editable_merge_request.title = title
         editable_merge_request.save()
 
