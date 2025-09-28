@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Warren Seine", email = "warren.seine@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "pre-commit >=4.1.0,<5",
     "gitpython >=3.1.41,<4",
