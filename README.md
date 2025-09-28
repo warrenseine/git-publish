@@ -21,9 +21,9 @@ $ uv build
 $ uv tool install . -e
 ```
 
-Set the required environment variables (add to your shell profile):
+Set the required environment variables (add to your shell profile) or rely on the token resolver:
 
-- `GITHUB_TOKEN` — required for GitHub projects (repo scope sufficient for PRs)
+- `GITHUB_TOKEN` — required for GitHub projects (repo scope sufficient for PRs). The tool will also accept `GH_TOKEN`, or fall back to `gh auth token` and Git credential helper.
 - `GITLAB_TOKEN` — required for GitLab projects (api scope)
 - `GITLAB_URL` — optional GitLab instance URL; default: `https://gitlab.com`
 - `GITPUBLISH_BRANCH_PREFIX` — optional branch/id prefix; defaults to your OS username
@@ -84,6 +84,38 @@ $ uv run task test    # pytest
 - "Branch is not up‑to‑date with its tracking branch" → `git fetch` then `git pull --ff-only`.
 - "Must be on a main branch" → switch to `main`, `master`, `development`, or `develop`.
 - "Empty GITHUB_TOKEN/GITLAB_TOKEN" → export in your shell or add to `.env`.
+
+## Dev containers and CI-friendly token resolution
+
+`git-publish` now resolves the GitHub token in this order:
+
+1. `GITHUB_TOKEN` (or `GH_TOKEN`) environment variable
+2. `gh auth token` if the GitHub CLI is installed and logged in
+3. Git credential helper (`git credential fill` for `github.com`)
+
+This works well in VS Code tasks and dev containers where environment variables may not be present.
+
+Dev container task example:
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "git-publish",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "GITHUB_TOKEN=$(gh auth token 2>/dev/null || true) git publish"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
+```
+
+Alternatively, add a `.env` file in the workspace (not committed) with `GITHUB_TOKEN=...` which the tool auto‑loads.
 
 # Example output
 
